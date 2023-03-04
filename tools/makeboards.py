@@ -70,7 +70,15 @@ def BuildBoot(name):
             ("IS25LP080 QSPI /2", "boot2_is25lp080_2_padded_checksum"), ("IS25LP080 QSPI /4", "boot2_is25lp080_4_padded_checksum"),
             ("W25Q080 QSPI /2", "boot2_w25q080_2_padded_checksum"), ("W25Q080 QSPI /4", "boot2_w25q080_4_padded_checksum"),
             ("W25X10CL QSPI /2", "boot2_w25x10cl_2_padded_checksum"), ("W25X10CL QSPI /4", "boot2_w25x10cl_4_padded_checksum"),
-            ("W25Q64JV QSPI /4", "boot2_w25q64jv_4_padded_checksum"), ("W25Q16JVxQ QSPI /4", "boot2_w25q16jvxq_4_padded_checksum") ]:
+            ("W25Q64JV QSPI /4", "boot2_w25q64jv_4_padded_checksum"), ("W25Q16JVxQ QSPI /4", "boot2_w25q16jvxq_4_padded_checksum"),
+            ("W25Q128JV QSPI /4", "boot2_w25q128jvxq_4_padded_checksum")]:
+        print("%s.menu.boot2.%s=%s" % (name, l[1], l[0]))
+        print("%s.menu.boot2.%s.build.boot2=%s" % (name, l[1], l[1]))
+
+# Abbreviated Boot Stage 2 menu for some W25Q-equipped Adafruit boards.
+# In extreme overclock situations, these may require QSPI /4 to work.
+def BuildBootW25Q(name):
+    for l in [ ("W25Q080 QSPI /2", "boot2_w25q080_2_padded_checksum"), ("W25Q080 QSPI /4", "boot2_w25q080_4_padded_checksum")]:
         print("%s.menu.boot2.%s=%s" % (name, l[1], l[0]))
         print("%s.menu.boot2.%s.build.boot2=%s" % (name, l[1], l[1]))
 
@@ -93,18 +101,25 @@ def BuildCountry(name):
         print("%s.menu.wificountry.%s=%s" % (name, sane.lower(), c))
         print("%s.menu.wificountry.%s.build.wificc=-DWIFICC=CYW43_COUNTRY_%s" % (name, sane.lower(), sane))
 
-def BuildIPStack(name):
-    print("%s.menu.ipstack.ipv4only=IPv4 Only" % (name))
-    print('%s.menu.ipstack.ipv4only.build.libpico=libpico.a' % (name))
-    print('%s.menu.ipstack.ipv4only.build.lwipdefs=-DLWIP_IPV6=0 -DLWIP_IPV4=1' % (name))
-    print("%s.menu.ipstack.ipv4ipv6=IPv4 and IPv6" % (name))
-    print('%s.menu.ipstack.ipv4ipv6.build.libpico=libpico-ipv6.a' % (name))
-    print('%s.menu.ipstack.ipv4ipv6.build.lwipdefs=-DLWIP_IPV6=1 -DLWIP_IPV4=1' % (name))
+def BuildIPBTStack(name):
+    print("%s.menu.ipbtstack.ipv4only=IPv4 Only" % (name))
+    print('%s.menu.ipbtstack.ipv4only.build.libpicow=libpicow-noipv6-nobtc-noble.a' % (name))
+    print('%s.menu.ipbtstack.ipv4only.build.libpicowdefs=-DLWIP_IPV6=0 -DLWIP_IPV4=1' % (name))
+    print("%s.menu.ipbtstack.ipv4ipv6=IPv4 + IPv6" % (name))
+    print('%s.menu.ipbtstack.ipv4ipv6.build.libpicow=libpicow-ipv6-nobtc-noble.a' % (name))
+    print('%s.menu.ipbtstack.ipv4ipv6.build.libpicowdefs=-DLWIP_IPV6=1 -DLWIP_IPV4=1' % (name))
+    print("%s.menu.ipbtstack.ipv4btcble=IPv4 + Bluetooth" % (name))
+    print('%s.menu.ipbtstack.ipv4btcble.build.libpicow=libpicow-noipv6-btc-ble.a' % (name))
+    print('%s.menu.ipbtstack.ipv4btcble.build.libpicowdefs=-DLWIP_IPV6=0 -DLWIP_IPV4=1 -DENABLE_CLASSIC=1 -DENABLE_BLE=1' % (name))
+    print("%s.menu.ipbtstack.ipv4ipv6btcble=IPv4 + IPv6 + Bluetooth" % (name))
+    print('%s.menu.ipbtstack.ipv4ipv6btcble.build.libpicow=libpicow-ipv6-btc-ble.a' % (name))
+    print('%s.menu.ipbtstack.ipv4ipv6btcble.build.libpicowdefs=-DLWIP_IPV6=1 -DLWIP_IPV4=1 -DENABLE_CLASSIC=1 -DENABLE_BLE=1' % (name))
 
 def BuildUploadMethodMenu(name):
     for a, b, c, d, e, f in [ ["default", "Default (UF2)", 256, "picoprobe.tcl", "uf2conv", "uf2conv-network"],
                               ["picotool", "Picotool", 256, "picoprobe.tcl", "picotool", None],
                               ["picoprobe", "Picoprobe", 256, "picoprobe.tcl", "picoprobe", None],
+                              ["picoprobe_cmsis_dap", "Picoprobe (CMSIS-DAP)", 256, "picoprobe_cmsis_dap.tcl", "picoprobe_cmsis_dap", None],
                               ["picodebug", "Pico-Debug", 240, "picodebug.tcl", "picodebug", None] ]:
         print("%s.menu.uploadmethod.%s=%s" % (name, a, b))
         print("%s.menu.uploadmethod.%s.build.ram_length=%dk" % (name, a, c))
@@ -141,10 +156,11 @@ def BuildHeader(name, vendor_name, product_name, vid, pid, pwr, boarddefine, var
                     print("%s.vid.%d=%s" % (name, usb, vid))
                     print("%s.pid.%d=0x%04x" % (name, usb, thispid))
                     usb = usb + 1
+    print("%s.build.usbvid=-DUSBD_VID=%s" % (name, vid))
     if type(pid) == list:
-        print("%s.build.usbpid=-DSERIALUSB_PID=%s" % (name, pid[0]))
+        print("%s.build.usbpid=-DUSBD_PID=%s" % (name, pid[0]))
     else:
-        print("%s.build.usbpid=-DSERIALUSB_PID=%s" % (name, pid))
+        print("%s.build.usbpid=-DUSBD_PID=%s" % (name, pid))
     print("%s.build.usbpwr=-DUSBD_MAX_POWER_MA=%s" % (name, pwr))
     print("%s.build.board=%s" % (name, boarddefine))
     print("%s.build.mcu=cortex-m0plus" % (name))
@@ -159,11 +175,6 @@ def BuildHeader(name, vendor_name, product_name, vid, pid, pwr, boarddefine, var
     print("%s.build.core=rp2040" % (name))
     print("%s.build.ldscript=memmap_default.ld" % (name))
     print("%s.build.boot2=%s" % (name, boot2))
-    print("%s.build.vid=%s" % (name, vid))
-    if type(pid) == list:
-        print("%s.build.pid=%s" % (name, pid[0]))
-    else:
-        print("%s.build.pid=%s" % (name, pid))
     print('%s.build.usb_manufacturer="%s"' % (name, vendor_name))
     print('%s.build.usb_product="%s"' % (name, product_name))
     if extra != None:
@@ -191,7 +202,7 @@ def BuildGlobalMenuList():
     print("menu.boot2=Boot Stage 2")
     print("menu.wificountry=WiFi Region")
     print("menu.usbstack=USB Stack")
-    print("menu.ipstack=IP Stack")
+    print("menu.ipbtstack=IP/Bluetooth Stack")
     print("menu.uploadmethod=Upload Method")
 
 def MakeBoard(name, vendor_name, product_name, vid, pid, pwr, boarddefine, flashsizemb, boot2, extra = None):
@@ -216,9 +227,11 @@ def MakeBoard(name, vendor_name, product_name, vid, pid, pwr, boarddefine, flash
     BuildUSBStack(name)
     if name == "rpipicow":
         BuildCountry(name)
-    BuildIPStack(name)
+    BuildIPBTStack(name)
     if name == "generic":
         BuildBoot(name)
+    elif name.startswith("adafruit") and "w25q080" in boot2:
+        BuildBootW25Q(name)
     BuildUploadMethodMenu(name)
     MakeBoardJSON(name, vendor_name, product_name, vid, pid, pwr, boarddefine, flashsizemb, boot2, extra)
     global pkgjson
@@ -320,11 +333,12 @@ MakeBoard("rpipico", "Raspberry Pi", "Pico", "0x2e8a", "0x000a", 250, "RASPBERRY
 MakeBoard("rpipicow", "Raspberry Pi", "Pico W", "0x2e8a", "0xf00a", 250, "RASPBERRY_PI_PICO_W", 2, "boot2_w25q080_2_padded_checksum")
 
 # 0xCB
-MakeBoard("0xcb_helios", "0xCB", "Helios", "0x1209", "0xCB74", 500, "0XCB_HELIOS", 16, "boot2_w25q080_2_padded_checksum")
+MakeBoard("0xcb_helios", "0xCB", "Helios", "0x1209", "0xCB74", 500, "0XCB_HELIOS", 16, "boot2_w25q128jvxq_4_padded_checksum")
 
 # Adafruit
 MakeBoard("adafruit_feather", "Adafruit", "Feather RP2040", "0x239a", "0x80f1", 250, "ADAFRUIT_FEATHER_RP2040", 8, "boot2_w25x10cl_4_padded_checksum")
 MakeBoard("adafruit_feather_scorpio", "Adafruit", "Feather RP2040 SCORPIO", "0x239a", "0x8121", 250, "ADAFRUIT_FEATHER_RP2040_SCORPIO", 8, "boot2_w25q080_2_padded_checksum")
+MakeBoard("adafruit_feather_dvi", "Adafruit", "Feather RP2040 DVI", "0x239a", "0x8127", 250, "ADAFRUIT_FEATHER_RP2040_DVI", 8, "boot2_w25q080_2_padded_checksum")
 MakeBoard("adafruit_itsybitsy", "Adafruit", "ItsyBitsy RP2040", "0x239a", "0x80fd", 250, "ADAFRUIT_ITSYBITSY_RP2040", 8, "boot2_w25q080_2_padded_checksum")
 MakeBoard("adafruit_qtpy", "Adafruit", "QT Py RP2040", "0x239a", "0x80f7", 250, "ADAFRUIT_QTPY_RP2040", 8, "boot2_w25q080_2_padded_checksum")
 MakeBoard("adafruit_stemmafriend", "Adafruit", "STEMMA Friend RP2040", "0x239a", "0x80e3", 250, "ADAFRUIT_STEMMAFRIEND_RP2040", 8, "boot2_w25q080_2_padded_checksum")
